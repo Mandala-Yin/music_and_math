@@ -51,7 +51,7 @@ class Markov:
 
 if __name__ == '__main__':
     random.seed(520)
-    
+
     pitch_markov = Markov(3)  # 这里传矩阵阶数
     note_markov = Markov(3)
 

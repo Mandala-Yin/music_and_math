@@ -1,7 +1,7 @@
 import random
 from markov import Markov
 
-def mode_uncoupled(data_pitch, data_note, maxlen = 500):
+def mode_uncoupled(data_pitch, data_note, maxlen = 500, rank = None):
     random.seed(520)
 
     pitch_markov = Markov() 
@@ -19,15 +19,17 @@ def mode_uncoupled(data_pitch, data_note, maxlen = 500):
     
     Len = maxlen
     while(len(new_pitch) < Len): 
-        new_pitch += pitch_markov.getSequense(pre_=new_pitch,alpha=0.2)
+        new_pitch += pitch_markov.getSequense(rank_=rank, pre_=new_pitch,alpha=0.2)
     while(len(new_note) < Len):
-        new_note += note_markov.getSequense(rank_=3)
+        if rank == None:
+            rank = 3
+        new_note += note_markov.getSequense(rank_=rank)
     new_pitch = new_pitch[:Len]
     new_note = new_note[:Len]
 
     return (new_pitch, new_note)
 
-def mode_full_coupled(data_pitch, data_note, maxlen = 500):
+def mode_full_coupled(data_pitch, data_note, maxlen = 500,  rank = None):
     l = [data_pitch[i] + '_' + data_note[i] for i in range(len(data_pitch))]
     # print(l)
     my_markov = Markov()
@@ -38,7 +40,7 @@ def mode_full_coupled(data_pitch, data_note, maxlen = 500):
     
     Len = maxlen
     while(len(new_data) < Len): 
-        new_data = my_markov.getSequense(pre_ = new_data)
+        new_data = my_markov.getSequense(rank_=rank, pre_ = new_data)
     new_data = new_data[:Len]
     
     new_pitch = [new_data[i][:new_data[i].find('_')] for i in range(Len)]
@@ -47,7 +49,7 @@ def mode_full_coupled(data_pitch, data_note, maxlen = 500):
     return (new_pitch, new_note)
     
 
-def mode_half_coupled(data_pitch, data_note, maxlen = 500):
+def mode_half_coupled(data_pitch, data_note, maxlen = 500, rank = None):
 
     pitch_markov = Markov() 
     pitch_markov.pushback(data_pitch) 
@@ -72,7 +74,7 @@ def mode_half_coupled(data_pitch, data_note, maxlen = 500):
     new_note = []
     Len = maxlen
     while(len(new_pitch) < Len): 
-        new_pitch += pitch_markov.getSequense(pre_=new_pitch,alpha=0.2)
+        new_pitch += pitch_markov.getSequense(rank_=rank, pre_=new_pitch,alpha=0.2)
     new_pitch = new_pitch[:Len]
     
     for i in range(Len):

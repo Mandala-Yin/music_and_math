@@ -38,7 +38,10 @@ class Child_Widget(QWidget):
         self.try_bt = QPushButton('试听', self)
         self.try_bt.clicked.connect(self.play_midi)
 
-        self.yes_bt = QPushButton('选择', self)
+        self.save_bt = QPushButton('保存', self)
+        self.save_bt.clicked.connect(self.save)
+
+        self.yes_bt = QPushButton('拼接', self)
         self.yes_bt.clicked.connect(self.choose)
 
         self.quit_bt = QPushButton('放弃', self)
@@ -49,12 +52,25 @@ class Child_Widget(QWidget):
 
         hbox1 = QHBoxLayout()
         hbox1.addWidget(self.try_bt)
+        hbox1.addWidget(self.save_bt)
         hbox1.addStretch(1)
         hbox1.addWidget(self.yes_bt)
         hbox1.addWidget(self.quit_bt)
 
         vbox1.addLayout(hbox1)
         self.setLayout(vbox1)
+
+    def save(self):
+        directory = QFileDialog.getSaveFileName(
+            self, "Set Saving Path", "./result")
+
+        if directory[0] != "":
+            with open(directory[0] + "_fragment.txt", 'w') as wf:
+                wf.write(' '.join(self.pitch) + '\n')
+                wf.write(' '.join(self.note) + '\n')
+
+            array_to_midi(directory[0] + '_fragment.txt',
+                          directory[0] + '_fragment.mid', format='name', bpm=80)
 
     def choose(self):
         self._signal.emit(1)
@@ -90,6 +106,7 @@ class MyMainWindow(QWidget):
         self.child = Child_Widget()
 
         self.len = 16
+        self.rank = None
 
         self.input_paths = []
         self.mode = 0
@@ -103,7 +120,9 @@ class MyMainWindow(QWidget):
         self.length_list = []
 
         for i in range(3, 8):
-            self.length_list.append(str(2**i) + "  ")
+            self.length_list.append(str(2**i) + "   ")
+
+        self.rank_list = ['mixed rank', '1', '2', '3', '4', '5']
 
         self.initUI()
 
@@ -136,6 +155,10 @@ class MyMainWindow(QWidget):
         self.combobox2 = QComboBox(self)
         self.combobox2.addItems(self.length_list)
         self.combobox2.currentIndexChanged[int].connect(self.choose_len)
+
+        self.combobox3 = QComboBox(self)
+        self.combobox3.addItems(self.rank_list)
+        self.combobox3.currentIndexChanged[int].connect(self.choose_rank)
 
         self.gen_bt = QPushButton('生成片段', self)
         self.gen_bt.clicked.connect(self.generate)
@@ -172,6 +195,7 @@ class MyMainWindow(QWidget):
         self.hbox1.addStretch(1)
         self.hbox1.addWidget(self.combobox1)
         self.hbox1.addWidget(self.combobox2)
+        self.hbox1.addWidget(self.combobox3)
         self.hbox1.addWidget(self.gen_bt)
 
         self.hbox2 = QHBoxLayout()
@@ -208,7 +232,7 @@ class MyMainWindow(QWidget):
 
     def choose_source(self):
         file_name = QFileDialog.getOpenFileName(
-            self, "Open File", "./src/", "Txt (*.txt);;Mid (*.mid)")
+            self, "Open File", "./src/", "Txt (*.txt)")
 
         if file_name[0]:
             self.input_paths.append(file_name[0])
@@ -222,6 +246,12 @@ class MyMainWindow(QWidget):
     def choose_len(self, i):
         self.len = int(self.length_list[i].rstrip())
 
+    def choose_rank(self, i):
+        if i == 0:
+            self.rank = None
+        else:
+            self.rank = int(self.rank_list[i])
+
     def clear_source(self):
         self.data_pitch = []
         self.data_note = []
@@ -231,13 +261,13 @@ class MyMainWindow(QWidget):
     def generate(self):
         if self.mode == 0:
             self.new_pitch, self.new_note = mode_half_coupled(
-                self.data_pitch, self.data_note, self.len)
+                self.data_pitch, self.data_note, self.len, self.rank)
         elif self.mode == 1:
             self.new_pitch, self.new_note = mode_full_coupled(
-                self.data_pitch, self.data_note, self.len)
+                self.data_pitch, self.data_note, self.len, self.rank)
         elif self.mode == 2:
             self.new_pitch, self.new_note = mode_uncoupled(
-                self.data_pitch, self.data_note, self.len)
+                self.data_pitch, self.data_note, self.len, self.rank)
 
         self.child.text.setText(
             ' '.join(self.new_pitch) + '\n\n\n' + ' '.join(self.new_note))
@@ -248,7 +278,6 @@ class MyMainWindow(QWidget):
 
         array_to_midi('out.txt', 'out.mid', format='name', bpm=80)
         self.child.file = "out.mid"
-
         self.child.show()
     
     def restart(self):

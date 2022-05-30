@@ -10,8 +10,9 @@ from PyQt5 import QtCore
 from process import *
 from generator import *
 
+
 class Child_Widget(QWidget):
-    _signal = QtCore.pyqtSignal(bool)
+    _signal = QtCore.pyqtSignal(int)
 
     def __init__(self):
         super().__init__()
@@ -61,16 +62,7 @@ class Child_Widget(QWidget):
         self.setLayout(vbox1)
 
     def save(self):
-        directory = QFileDialog.getSaveFileName(
-            self, "Set Saving Path", "./result")
-
-        if directory[0] != "":
-            with open(directory[0] + "_fragment.txt", 'w') as wf:
-                wf.write(' '.join(self.pitch) + '\n')
-                wf.write(' '.join(self.note) + '\n')
-
-            array_to_midi(directory[0] + '_fragment.txt',
-                          directory[0] + '_fragment.mid', format='name', bpm=80)
+        self._signal.emit(2)
 
     def choose(self):
         self._signal.emit(1)
@@ -187,7 +179,6 @@ class MyMainWindow(QWidget):
         self.text2.setFocus()
         self.text2.setStyleSheet("background-image:url(./pics/7.jpg)")
 
-
         self.vbox1 = QVBoxLayout()
         self.hbox1 = QHBoxLayout()
         self.hbox1.addWidget(self.source_bt)
@@ -279,12 +270,22 @@ class MyMainWindow(QWidget):
         array_to_midi('out.txt', 'out.mid', format='name', bpm=80)
         self.child.file = "out.mid"
         self.child.show()
-    
+
     def restart(self):
         self.pitch = []
         self.note = []
 
     def update(self, save_it):
+        if save_it == 2:
+            directory = QFileDialog.getSaveFileName(
+                self, "Set Saving Path", "./result")
+            if directory[0] != "":
+                with open(directory[0] + "_frag.txt", 'w') as wf:
+                    wf.write(' '.join(self.new_pitch) + '\n')
+                    wf.write(' '.join(self.new_note) + '\n')
+            array_to_midi(directory[0] + '_frag.txt',
+                        directory[0] + '_frag.mid', format='name', bpm=80)
+            return
         if save_it != 0:
             self.pitch += self.new_pitch
             self.note += self.new_note
@@ -296,12 +297,12 @@ class MyMainWindow(QWidget):
             self, "Set Saving Path", "./result")
 
         if directory[0] != "":
-            with open(directory[0] + ".txt", 'w') as wf:
+            with open(directory[0] + "_frag.txt", 'w') as wf:
                 wf.write(' '.join(self.pitch) + '\n')
                 wf.write(' '.join(self.note) + '\n')
 
-            array_to_midi(directory[0] + '.txt',
-                          directory[0] + '.mid', format='name', bpm=80)
+        array_to_midi(directory[0] + '_frag.txt',
+                      directory[0] + '_frag.mid', format='name', bpm=80)
 
 
 if __name__ == '__main__':

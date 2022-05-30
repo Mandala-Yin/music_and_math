@@ -21,8 +21,6 @@ def mode_uncoupled(data_pitch, data_note, maxlen = 500, rank = None):
     while(len(new_pitch) < Len): 
         new_pitch += pitch_markov.getSequense(rank_=rank, pre_=new_pitch,alpha=0.2)
     while(len(new_note) < Len):
-        if rank == None:
-            rank = 3
         new_note += note_markov.getSequense(rank_=rank)
     new_pitch = new_pitch[:Len]
     new_note = new_note[:Len]

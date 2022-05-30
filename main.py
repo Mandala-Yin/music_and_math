@@ -144,13 +144,14 @@ class MyMainWindow(QWidget):
         directory = QFileDialog.getSaveFileName(
             self, "Set Saving Path", "./result")
 
-        with open(directory[0] + ".txt", 'w') as wf:
-            wf.write(' '.join(self.new_pitch) + '\n')
-            wf.write(' '.join(self.new_note) + '\n')
+        if directory[0] != "":
+            with open(directory[0] + ".txt", 'w') as wf:
+                wf.write(' '.join(self.new_pitch) + '\n')
+                wf.write(' '.join(self.new_note) + '\n')
 
-        array_to_midi(directory[0] + '.txt',
-                      directory[0] + '.mid', format='name', bpm=80)
-        self.text2.setText("Saved.")
+            array_to_midi(directory[0] + '.txt',
+                        directory[0] + '.mid', format='name', bpm=80)
+            self.text2.setText("Saved.")
 
 
 if __name__ == '__main__':

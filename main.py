@@ -1,14 +1,85 @@
-import random
 import sys
-import math
-from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QMessageBox, QLabel, QScrollArea, QFileDialog
-from PyQt5.QtWidgets import QTextEdit, QComboBox, QLineEdit, QMainWindow, QHBoxLayout, QVBoxLayout
-from PyQt5.QtGui import QPalette, QBrush, QPixmap, QFont, QSyntaxHighlighter
-from PyQt5.QtCore import QCoreApplication, Qt, QSize, QRegExp
+import os
+import pygame
+from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QLabel, QFileDialog
+from PyQt5.QtWidgets import QTextEdit, QComboBox, QHBoxLayout, QVBoxLayout
+from PyQt5.QtGui import QPalette, QBrush, QPixmap
+from PyQt5.QtCore import QCoreApplication, Qt
 from PyQt5 import QtCore
 
 from process import *
 from generator import *
+
+class Child_Widget(QWidget):
+    _signal = QtCore.pyqtSignal(bool)
+
+    def __init__(self):
+        super().__init__()
+
+        self.file = None
+        self.maxlen = 0
+        self.initUI()
+
+    def initUI(self):
+
+        self.setGeometry(300, 220, 600, 400)
+        self.setWindowTitle('fragment')
+        self.setObjectName("MyWidget")
+        palette = QPalette()
+        palette.setBrush(self.backgroundRole(), QBrush(QPixmap("pics/7.jpg")))
+
+        self.setPalette(palette)
+        self.setAutoFillBackground(False)
+
+        self.text = QLabel()
+        self.text.setWordWrap(True)
+        self.text.setAlignment(Qt.AlignCenter | Qt.AlignTop)
+
+        self.try_bt = QPushButton('试听', self)
+        self.try_bt.clicked.connect(self.play_midi)
+
+        self.yes_bt = QPushButton('选择', self)
+        self.yes_bt.clicked.connect(self.choose)
+
+        self.quit_bt = QPushButton('放弃', self)
+        self.quit_bt.clicked.connect(self.quit_)
+
+        vbox1 = QVBoxLayout()
+        vbox1.addWidget(self.text)
+
+        hbox1 = QHBoxLayout()
+        hbox1.addWidget(self.try_bt)
+        hbox1.addStretch(1)
+        hbox1.addWidget(self.yes_bt)
+        hbox1.addWidget(self.quit_bt)
+
+        vbox1.addLayout(hbox1)
+        self.setLayout(vbox1)
+
+    def choose(self):
+        self._signal.emit(1)
+        self.close()
+
+    def quit_(self):
+        self._signal.emit(0)
+        self.close()
+
+    def play_midi(self):
+        freq = 44100
+        bitsize = -16
+        channels = 2
+        buffer = 1024
+        pygame.mixer.init(freq, bitsize, channels, buffer)
+        pygame.mixer.music.set_volume(1)
+        clock = pygame.time.Clock()
+        try:
+            pygame.mixer.music.load(self.file)
+        except:
+            import traceback
+            print(traceback.format_exc())
+        pygame.mixer.music.play()
+        while pygame.mixer.music.get_busy():
+            clock.tick(30)
 
 
 class MyMainWindow(QWidget):
@@ -16,15 +87,18 @@ class MyMainWindow(QWidget):
     def __init__(self):
 
         super().__init__()
-        self.Len = 500
+        self.child = Child_Widget()
+
+        self.len = 16
 
         self.input_paths = []
-        self.output_txt_path = 'out.txt'
-        self.output_mid_path = 'out.mid'
         self.mode = 0
 
         self.data_pitch = []
         self.data_note = []
+
+        self.pitch = []
+        self.note = []
 
         self.initUI()
 
@@ -60,7 +134,7 @@ class MyMainWindow(QWidget):
 
         self.save_bt = QPushButton('保存', self)
         self.save_bt.clicked.connect(self.save)
-   
+
         self.text1 = QTextEdit('', self)
         self.text1.selectAll()
         self.text1.setFocus()
@@ -71,31 +145,21 @@ class MyMainWindow(QWidget):
         self.text2.setFocus()
         self.text2.setStyleSheet("background-image:url(./pics/7.jpg)")
 
-        self.text3 = QTextEdit('', self)
-        self.text3.selectAll()
-        self.text3.setFocus()
-        self.text3.setStyleSheet("background-image:url(./pics/7.jpg)")
 
         self.vbox1 = QVBoxLayout()
-
         self.hbox1 = QHBoxLayout()
         self.hbox1.addWidget(self.source_bt)
         self.hbox1.addWidget(self.clear_bt)
-        self.hbox1.addStretch(1)  
+        self.hbox1.addStretch(1)
         self.hbox1.addWidget(self.combobox1)
         self.hbox1.addWidget(self.gen_bt)
-        
+
         self.hbox2 = QHBoxLayout()
-
-        self.vbox_child = QVBoxLayout()
-        self.vbox_child.addWidget(self.text1)
-        self.vbox_child.addWidget(self.text2)
-
-        self.hbox2.addLayout(self.vbox_child)
-        self.hbox2.addWidget(self.text3)
+        self.hbox2.addWidget(self.text1)
+        self.hbox2.addWidget(self.text2)
 
         self.hbox3 = QHBoxLayout()
-        self.hbox3.addStretch(1)  
+        self.hbox3.addStretch(1)
         self.hbox3.addWidget(self.save_bt)
         self.hbox3.addWidget(self.quit_bt)
 
@@ -104,6 +168,7 @@ class MyMainWindow(QWidget):
         self.vbox1.addLayout(self.hbox3)
 
         self.setLayout(self.vbox1)
+        self.child._signal.connect(self.update)
 
         self.show()
 
@@ -113,7 +178,7 @@ class MyMainWindow(QWidget):
 
     def choose_source(self):
         file_name = QFileDialog.getOpenFileName(
-            self, "Open File", "./src/", "Txt (*.txt)")
+            self, "Open File", "./src/", "Txt (*.txt);;Mid (*.mid)")
 
         if file_name[0]:
             self.input_paths.append(file_name[0])
@@ -132,13 +197,33 @@ class MyMainWindow(QWidget):
 
     def generate(self):
         if self.mode == 0:
-            self.new_pitch, self.new_note = mode_half_coupled(self.data_pitch, self.data_note, 500)         
+            self.new_pitch, self.new_note = mode_half_coupled(
+                self.data_pitch, self.data_note, self.len)
         elif self.mode == 1:
-            self.new_pitch, self.new_note = mode_full_coupled(self.data_pitch, self.data_note, 500)
+            self.new_pitch, self.new_note = mode_full_coupled(
+                self.data_pitch, self.data_note, self.len)
         elif self.mode == 2:
-            self.new_pitch, self.new_note = mode_uncoupled(self.data_pitch, self.data_note, 500)
+            self.new_pitch, self.new_note = mode_uncoupled(
+                self.data_pitch, self.data_note, self.len)
 
-        self.text3.setText(' '.join(self.new_pitch) + '\n' + ' '.join(self.new_note))
+        self.child.text.setText(
+            ' '.join(self.new_pitch) + '\n\n\n' + ' '.join(self.new_note))
+
+        with open("out.txt", 'w') as wf:
+            wf.write(' '.join(self.new_pitch) + '\n')
+            wf.write(' '.join(self.new_note) + '\n')
+
+        array_to_midi('out.txt', 'out.mid', format='name', bpm=80)
+        self.child.file = "out.mid"
+
+        self.child.show()
+
+    def update(self, save_it):
+        if save_it != 0:
+            self.pitch += self.new_pitch
+            self.note += self.new_note
+        os.remove('out.txt')
+        os.remove('out.mid')
 
     def save(self):
         directory = QFileDialog.getSaveFileName(
@@ -146,12 +231,11 @@ class MyMainWindow(QWidget):
 
         if directory[0] != "":
             with open(directory[0] + ".txt", 'w') as wf:
-                wf.write(' '.join(self.new_pitch) + '\n')
-                wf.write(' '.join(self.new_note) + '\n')
+                wf.write(' '.join(self.pitch) + '\n')
+                wf.write(' '.join(self.note) + '\n')
 
             array_to_midi(directory[0] + '.txt',
-                        directory[0] + '.mid', format='name', bpm=80)
-            self.text2.setText("Saved.")
+                          directory[0] + '.mid', format='name', bpm=80)
 
 
 if __name__ == '__main__':

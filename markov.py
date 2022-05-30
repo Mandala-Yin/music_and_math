@@ -1,52 +1,80 @@
 import random
 from process import *
 
+
 class Markov:
-    def __init__(self, Rank: int = 1):
+    def __init__(self):
         self.dataset = []
-        self.dic = {}
-        self.rank = Rank
-
-    def pushback(self, data: list):
-        self.dataset.append(data + ['end'])
-
+        self.dics = []
+        self.maxRank=100  #只计算前100阶马尔可夫
+    def pushback(self,data:list):
+        self.dataset.append(data+['end'])
     def getTransferMatrix(self):
-        # 输入中请不要包含+和start，end
-        self.dic = {}
-        for data in self.dataset:
-            now = "+".join(["start" for i in range(self.rank)])
-            for i in data:
-                # print(now)
-                if(now not in self.dic):
-                    self.dic[now] = ([], [])
-                if(i not in self.dic[now][0]):
-                    self.dic[now][0].append(i)
-                    self.dic[now][1].append(0)
-                self.dic[now][1][self.dic[now][0].index(i)] += 1
-                if(self.rank != 1):
-                    # print(now,now.find('+'))
-                    now = now[now.find('+')+1:]+'+'+i
-                else:
-                    now = i
-
-    def showMatrix(self):
-        for i in self.dic.keys():
-            # print(i[0],'\n',i[1])
-            print(i, self.dic[i])
-
-    def getSequense(self):
-        now = "+".join(['start' for i in range(self.rank)])
+        #输入中请不要包含+和start，end
+        for rank in range(self.maxRank+1): 
+            dic = {}
+            for data in self.dataset:
+                now = "+".join(["start" for i in range(rank)])
+                for i in data:
+                    # print(now)
+                    if(now not in dic):
+                        dic[now]=([],[])
+                    if(i not in dic[now][0]):
+                        dic[now][0].append(i)
+                        dic[now][1].append(0)
+                    dic[now][1][dic[now][0].index(i)]+=1
+                    if(rank==0):
+                        now = ''
+                    elif(rank==1):
+                        now = i                       
+                    else:
+                        now = now[now.find('+')+1:]+'+'+i
+            self.dics.append(dic)
+                
+    def showMatrix(self,ranklist=range(2)):
+        for rank in ranklist:
+            print(f"*********Rank {rank}***********")
+            for i in self.dics[rank].keys():
+                # print(i[0],'\n',i[1])
+                print(i,self.dics[rank][i])
+            print("^^^^^^^^^^^^^^^^^^^^^^^^^^^\n");
+            
+            
+    def getSequense(self,rank_=None,pre_=None,alpha=0.5):
+        p=1
+        seq = []
+        for i in range(self.maxRank+1):
+            seq.append(p*alpha)
+            p = p*(1-alpha)
+        pre = ['start'] * self.maxRank
         ret = []
+        fail_cnt = 0
+        if pre_ is not None:
+            pre += pre_
+        # print(pre) 
         while True:
-            assert now in self.dic, 'Not found {} in dic!'.format(now)
-            qwq = random.choices(self.dic[now][0], weights=self.dic[now][1])
-            if(qwq[0] == 'end'):
-                return ret
-            ret += qwq
-            if(self.rank != 1):
-                now = now[now.find('+')+1:]+'+'+qwq[0]
+            if(rank_ is not None):
+                rank = rank_
+            else :
+                rank = random.choices(range(1,self.maxRank+1),weights=seq[1:])[0]
+            if(rank==0):
+                now = ''
+            elif(rank==1):
+                now = pre[-1]                       
             else:
-                now = qwq[0]
+                now = '+'.join(pre[-rank:])
+            # print(rank,now) #取消注释这一行可以观察选择的阶数，理解alpha的效果。
+            if(now in self.dics[rank]):
+                qwq = random.choices(self.dics[rank][now][0],weights=self.dics[rank][now][1])
+                if(qwq[0] == 'end'): return ret
+                ret += qwq
+                pre += qwq
+            else:
+                fail_cnt+=1
+                if(fail_cnt>1000):
+                    print("Warning: Failed many times.")
+                    return ret
+                     
 
 
 if __name__ == '__main__':

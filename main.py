@@ -100,6 +100,11 @@ class MyMainWindow(QWidget):
         self.pitch = []
         self.note = []
 
+        self.length_list = []
+
+        for i in range(3, 8):
+            self.length_list.append(str(2**i) + "  ")
+
         self.initUI()
 
     def initUI(self):
@@ -110,7 +115,6 @@ class MyMainWindow(QWidget):
         palette = QPalette()
         palette.setBrush(self.backgroundRole(), QBrush(QPixmap("pics/3.jpg")))
         self.setPalette(palette)
-        # self.setAutoFillBackground(True)
 
         self.bottons = []
 
@@ -129,16 +133,31 @@ class MyMainWindow(QWidget):
         self.combobox1.addItem("    解耦合    ")
         self.combobox1.currentIndexChanged[int].connect(self.choose_mode)
 
-        self.gen_bt = QPushButton('生成', self)
+        self.combobox2 = QComboBox(self)
+        self.combobox2.addItems(self.length_list)
+        self.combobox2.currentIndexChanged[int].connect(self.choose_len)
+
+        self.gen_bt = QPushButton('生成片段', self)
         self.gen_bt.clicked.connect(self.generate)
+
+        self.restart_bt = QPushButton("重新开始", self)
+        self.restart_bt.clicked.connect(self.restart)
 
         self.save_bt = QPushButton('保存', self)
         self.save_bt.clicked.connect(self.save)
+
+        self.title1 = QLabel()
+        self.title1.setAlignment(Qt.AlignCenter)
+        self.title1.setText("音高")
 
         self.text1 = QTextEdit('', self)
         self.text1.selectAll()
         self.text1.setFocus()
         self.text1.setStyleSheet("background-image:url(./pics/7.jpg)")
+
+        self.title2 = QLabel()
+        self.title2.setAlignment(Qt.AlignCenter)
+        self.title2.setText("时值")
 
         self.text2 = QTextEdit('', self)
         self.text2.selectAll()
@@ -152,14 +171,25 @@ class MyMainWindow(QWidget):
         self.hbox1.addWidget(self.clear_bt)
         self.hbox1.addStretch(1)
         self.hbox1.addWidget(self.combobox1)
+        self.hbox1.addWidget(self.combobox2)
         self.hbox1.addWidget(self.gen_bt)
 
         self.hbox2 = QHBoxLayout()
-        self.hbox2.addWidget(self.text1)
-        self.hbox2.addWidget(self.text2)
+
+        self.vbox2 = QVBoxLayout()
+        self.vbox2.addWidget(self.title1)
+        self.vbox2.addWidget(self.text1)
+
+        self.vbox3 = QVBoxLayout()
+        self.vbox3.addWidget(self.title2)
+        self.vbox3.addWidget(self.text2)
+
+        self.hbox2.addLayout(self.vbox2)
+        self.hbox2.addLayout(self.vbox3)
 
         self.hbox3 = QHBoxLayout()
         self.hbox3.addStretch(1)
+        self.hbox3.addWidget(self.restart_bt)
         self.hbox3.addWidget(self.save_bt)
         self.hbox3.addWidget(self.quit_bt)
 
@@ -189,6 +219,9 @@ class MyMainWindow(QWidget):
                 self.text1.setText(' '.join(self.data_pitch))
                 self.text2.setText(' '.join(self.data_note))
 
+    def choose_len(self, i):
+        self.len = int(self.length_list[i].rstrip())
+
     def clear_source(self):
         self.data_pitch = []
         self.data_note = []
@@ -217,6 +250,10 @@ class MyMainWindow(QWidget):
         self.child.file = "out.mid"
 
         self.child.show()
+    
+    def restart(self):
+        self.pitch = []
+        self.note = []
 
     def update(self, save_it):
         if save_it != 0:
